@@ -22,17 +22,6 @@ type Configuration struct {
 	PeriodInSeconds int64 `json:"period_in_seconds"`
 }
 
-func exists(path string) (bool, error) {
-	_, err := os.Stat(path)
-	if err == nil {
-		return true, nil
-	}
-	if os.IsNotExist(err) {
-		return false, nil
-	}
-	return true, err
-}
-
 var configFile = flag.String("config", "conf.json", "help message for flagname")
 
 func main() {
@@ -85,15 +74,15 @@ func main() {
 
 }
 
-func RunMultiple(cmdList []string, directory string) **exec.Cmd {
-	var process *exec.Cmd
-	go func() {
-		for _, cmd := range cmdList {
-			process = Run(cmd, directory)
-			process.Wait()
-		}
-	}()
-	return &process
+func exists(path string) (bool, error) {
+	_, err := os.Stat(path)
+	if err == nil {
+		return true, nil
+	}
+	if os.IsNotExist(err) {
+		return false, nil
+	}
+	return true, err
 }
 
 func Run(cmd string, directory string) *exec.Cmd {
