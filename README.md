@@ -24,17 +24,22 @@ autopull -h
 
 ```sh
 autopull --config {project-config}
-
-## **config.json** file
+```
+## Configuration file
 
 ```json
 {
-    "cmd": [*Your commands list*],
+    "cmd": [<Your commands list>],
     "directory": "project",
-    "git_repo": *Your repo*,
-    "git_branch": *Your repos branch*,
-    "period_in_seconds": *Period in seconds between checking project*
+    "git_repo": <Your repo>,
+    "git_branch": <Your repos branch>,
+    "period_in_seconds": <Period in seconds between checking project>
 }
+```
+
+##TODO
+-  Working with private repositories
+
 
 License
 =======
