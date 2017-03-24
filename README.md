@@ -29,11 +29,11 @@ autopull --config {project-config}
 
 ```json
 {
-    "cmd": [<Your commands list>],
-    "directory": "project",
-    "git_repo": <Your repo>,
-    "git_branch": <Your repos branch>,
-    "period_in_seconds": <Period in seconds between checking project>
+    "cmd": ["cmd 1", "cmd 2"],
+    "directory": "project_folder",
+    "git_repo": "https://github.com/Yourname/YourRepo.git",
+    "git_branch": "master",
+    "period_in_seconds": 3
 }
 ```
 
