@@ -2,31 +2,35 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
+	"flag"
 	"fmt"
+	git "github.com/libgit2/git2go"
 	"io"
 	"os"
 	"os/exec"
 	"strings"
-    git "github.com/libgit2/git2go"
-    "errors"
-    "time"
-    "syscall"
-    "flag"
+	"syscall"
+	"time"
 )
 
 type Configuration struct {
-	Cmd     []string
-	GitRepo string `json:"git_repo"`
-	Branch  string `json:"git_branch"`
-	Directory string
+	Cmd             []string
+	GitRepo         string `json:"git_repo"`
+	Branch          string `json:"git_branch"`
+	Directory       string
 	PeriodInSeconds int64 `json:"period_in_seconds"`
 }
 
 func exists(path string) (bool, error) {
-    _, err := os.Stat(path)
-    if err == nil { return true, nil }
-    if os.IsNotExist(err) { return false, nil }
-    return true, err
+	_, err := os.Stat(path)
+	if err == nil {
+		return true, nil
+	}
+	if os.IsNotExist(err) {
+		return false, nil
+	}
+	return true, err
 }
 
 var configFile = flag.String("config", "conf.json", "help message for flagname")
@@ -48,48 +52,48 @@ func main() {
 	}
 
 	CloneIfNeeded(configuration.Directory, configuration.GitRepo, configuration.Branch)
-	
+
 	var process **exec.Cmd
-	for {		
+	for {
 		killed := false
 		setPeriodic(func() bool {
 			repo, _ := git.OpenRepository(configuration.Directory)
-            changed, _ := Pull(repo, configuration.Branch)
-            if changed {
-            	pgid := (*process).Process.Pid
+			changed, _ := Pull(repo, configuration.Branch)
+			if changed {
+				pgid := (*process).Process.Pid
 				if err == nil {
-				    syscall.Kill(pgid, 15)  // note the minus sign
-				}       	
-            	killed = true
-            	return false
-            } else {
-            	return true
-            }			
+					syscall.Kill(pgid, 15) // note the minus sign
+				}
+				killed = true
+				return false
+			} else {
+				return true
+			}
 		}, configuration.PeriodInSeconds)
-	    for _, cmd := range configuration.Cmd {  
-	    	subProcess := Run(cmd, configuration.Directory)
-            process = &subProcess
-            subProcess.Wait()
-            if killed {
-	        	break
-	        }
-        }
-	    if !killed {
-	    	break
-	    }
+		for _, cmd := range configuration.Cmd {
+			subProcess := Run(cmd, configuration.Directory)
+			process = &subProcess
+			subProcess.Wait()
+			if killed {
+				break
+			}
+		}
+		if !killed {
+			break
+		}
 	}
-	
+
 }
 
 func RunMultiple(cmdList []string, directory string) **exec.Cmd {
-    var process *exec.Cmd
-    go func() {
-        for _, cmd := range cmdList {   
-            process = Run(cmd, directory)
-            process.Wait()
-        }
-    }()
-    return &process
+	var process *exec.Cmd
+	go func() {
+		for _, cmd := range cmdList {
+			process = Run(cmd, directory)
+			process.Wait()
+		}
+	}()
+	return &process
 }
 
 func Run(cmd string, directory string) *exec.Cmd {
@@ -107,7 +111,7 @@ func Run(cmd string, directory string) *exec.Cmd {
 
 	subProcess.Stdout = os.Stdout
 	subProcess.Stderr = os.Stderr
-	
+
 	if err = subProcess.Start(); err != nil { //Use start, not run
 		fmt.Println("An error occured: ", err) //replace with logger, or anything you want
 	}
@@ -117,26 +121,25 @@ func Run(cmd string, directory string) *exec.Cmd {
 	return subProcess
 }
 
-
-func setPeriodic(f func () bool, seconds int64) {
+func setPeriodic(f func() bool, seconds int64) {
 	go func() {
-		<-time.After(time.Duration(seconds * int64(time.Second)))	
+		<-time.After(time.Duration(seconds * int64(time.Second)))
 		repeat := f()
 		if repeat {
 			setPeriodic(f, seconds)
 		}
-	}()	
+	}()
 }
 
 func CloneIfNeeded(directory string, repoName string, branch string) {
 	if noNeedClone, _ := exists(directory); !noNeedClone {
-		cloneOptions := git.CloneOptions{CheckoutBranch: branch, Bare:false}
+		cloneOptions := git.CloneOptions{CheckoutBranch: branch, Bare: false}
 		repo, err := git.Clone(repoName, directory, &cloneOptions)
 		if err != nil {
 			fmt.Println("err:", err.Error())
 		} else {
 			fmt.Println("work:", repo.Workdir())
-		}	
+		}
 	} else {
 		repo, err := git.OpenRepository(directory)
 		if err != nil {
@@ -151,7 +154,6 @@ func CloneIfNeeded(directory string, repoName string, branch string) {
 	}
 }
 
-
 func Pull(repo *git.Repository, name string) (bool, error) {
 	// Locate remote
 	remote, err := repo.Remotes.Lookup("origin")
@@ -165,7 +167,7 @@ func Pull(repo *git.Repository, name string) (bool, error) {
 	}
 
 	// Get remote master
-	remoteBranch, err := repo.References.Lookup("refs/remotes/origin/"+name)
+	remoteBranch, err := repo.References.Lookup("refs/remotes/origin/" + name)
 	if err != nil {
 		return false, err
 	}
@@ -191,9 +193,9 @@ func Pull(repo *git.Repository, name string) (bool, error) {
 		return false, err
 	}
 
-	if analysis & git.MergeAnalysisUpToDate != 0 {
+	if analysis&git.MergeAnalysisUpToDate != 0 {
 		return false, nil
-	} else if analysis & git.MergeAnalysisNormal != 0 {
+	} else if analysis&git.MergeAnalysisNormal != 0 {
 		// Just merge changes
 		if err := repo.Merge([]*git.AnnotatedCommit{annotatedCommit}, nil, nil); err != nil {
 			return false, err
@@ -239,7 +241,7 @@ func Pull(repo *git.Repository, name string) (bool, error) {
 
 		// Clean up
 		repo.StateCleanup()
-	} else if analysis & git.MergeAnalysisFastForward != 0 {
+	} else if analysis&git.MergeAnalysisFastForward != 0 {
 		// Fast-forward changes
 		// Get remote tree
 		remoteTree, err := repo.LookupTree(remoteBranchID)
@@ -252,7 +254,7 @@ func Pull(repo *git.Repository, name string) (bool, error) {
 			return false, err
 		}
 
-		branchRef, err := repo.References.Lookup("refs/heads/"+name)
+		branchRef, err := repo.References.Lookup("refs/heads/" + name)
 		if err != nil {
 			return false, err
 		}
