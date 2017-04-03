@@ -40,7 +40,11 @@ func main() {
 		return
 	}
 
-	CloneIfNeeded(configuration.Directory, configuration.GitRepo, configuration.Branch)
+	err = CloneIfNeeded(configuration.Directory, configuration.GitRepo, configuration.Branch)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
 
 	var process **exec.Cmd
 	for {
@@ -120,27 +124,29 @@ func setPeriodic(f func() bool, seconds int64) {
 	}()
 }
 
-func CloneIfNeeded(directory string, repoName string, branch string) {
+func CloneIfNeeded(directory string, repoName string, branch string) error {
 	if noNeedClone, _ := exists(directory); !noNeedClone {
 		cloneOptions := git.CloneOptions{CheckoutBranch: branch, Bare: false}
 		repo, err := git.Clone(repoName, directory, &cloneOptions)
 		if err != nil {
 			fmt.Println("err:", err.Error())
+			return err
 		} else {
-			fmt.Println("work:", repo.Workdir())
+			fmt.Println("work:", repo.Workdir())			
 		}
 	} else {
 		repo, err := git.OpenRepository(directory)
 		if err != nil {
 			fmt.Println("err:", err.Error())
-			return
+			return err
 		}
 		_, err = Pull(repo, branch)
 		if err != nil {
 			fmt.Println("err:", err.Error())
-			return
+			return err
 		}
 	}
+	return nil
 }
 
 func Pull(repo *git.Repository, name string) (bool, error) {
